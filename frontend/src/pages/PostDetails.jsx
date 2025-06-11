@@ -14,33 +14,22 @@ const PostDetails = () => {
   const [post, setPost] = useState(null)
   const [recentArticles, setRecentArticles] = useState(null)
 
-  console.log(recentArticles)
-
-  // console.log(post)
-
   useEffect(() => {
     const fetchPost = async () => {
       try {
         setLoading(true)
-
         const res = await fetch(`/api/post/getposts?slug=${postSlug}`)
-
         const data = await res.json()
 
-        if (!res.ok) {
+        if (!res.ok || !data.posts || data.posts.length === 0) {
           setError(true)
-          setLoading(false)
-
-          return
-        }
-
-        if (res.ok) {
+        } else {
           setPost(data.posts[0])
-          setLoading(false)
-          setError(true)
+          setError(false)
         }
       } catch (error) {
         setError(true)
+      } finally {
         setLoading(false)
       }
     }
@@ -49,21 +38,17 @@ const PostDetails = () => {
   }, [postSlug])
 
   useEffect(() => {
-    try {
-      const fetchRecentPosts = async () => {
+    const fetchRecentPosts = async () => {
+      try {
         const res = await fetch(`/api/post/getposts?limit=3`)
-
         const data = await res.json()
-
-        if (res.ok) {
-          setRecentArticles(data.posts)
-        }
+        if (res.ok) setRecentArticles(data.posts)
+      } catch (error) {
+        console.error("Recent posts failed", error)
       }
-
-      fetchRecentPosts()
-    } catch (error) {
-      console.log(error.message)
     }
+
+    fetchRecentPosts()
   }, [])
 
   if (loading) {
@@ -78,32 +63,39 @@ const PostDetails = () => {
     )
   }
 
+  if (error) {
+    return (
+      <div className="text-center mt-10 text-red-600 font-semibold">
+        Failed to load post!
+      </div>
+    )
+  }
+
   return (
     <main className="p-3 flex flex-col max-w-6xl mx-auto min-h-screen">
       <h1 className="text-3xl mt-10 p-3 text-center font-bold max-w-3xl mx-auto lg:text-4xl text-slate-700 underline">
-        {post && post.title}
+        {post.title}
       </h1>
 
       <Link
-        to={`/search?category=${post && post.category}`}
+        to={`/search?category=${post.category}`}
         className="self-center mt-5"
       >
         <Button variant="outline" className="border border-slate-500">
-          {post && post.category}
+          {post.category}
         </Button>
       </Link>
 
       <img
-        src={post && post.image}
-        alt={post && post.title}
+        src={post.image}
+        alt={post.title}
         className="mt-10 p-3 max-h-[500px] w-full object-cover"
       />
 
       <div className="flex justify-between p-3 mx-auto w-full max-w-2xl text-xs">
-        <span>{post && new Date(post.createdAt).toLocaleDateString()}</span>
-
+        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
         <span className="italic">
-          {post && (post.content.length / 100).toFixed(0)} mins read
+          {(post.content.length / 100).toFixed(0)} mins read
         </span>
       </div>
 
@@ -111,7 +103,7 @@ const PostDetails = () => {
 
       <div
         className="p-3 max-w-3xl mx-auto w-full post-content"
-        dangerouslySetInnerHTML={{ __html: post && post.content }}
+        dangerouslySetInnerHTML={{ __html: post.content }}
       ></div>
 
       <div className="max-w-4xl mx-auto w-full">
@@ -127,8 +119,8 @@ const PostDetails = () => {
 
         <div className="flex flex-wrap gap-5 my-5 justify-center">
           {recentArticles &&
-            recentArticles.map((post) => (
-              <PostCard key={post._id} post={post} />
+            recentArticles.map((item) => (
+              <PostCard key={item._id} post={item} />
             ))}
         </div>
       </div>

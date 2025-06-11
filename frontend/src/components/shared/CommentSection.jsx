@@ -1,214 +1,186 @@
 import React, { useEffect, useState } from "react"
-import { useSelector } from "react-redux"
-import { Link, useNavigate } from "react-router-dom"
-import { Textarea } from "../ui/textarea"
-import { Button } from "../ui/button"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import Comment from "./Comment"
 
 const CommentSection = ({ postId }) => {
   const { toast } = useToast()
-  const navigate = useNavigate()
+  const [comments, setComments] = useState([])
+  const [newComment, setNewComment] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [editingCommentId, setEditingCommentId] = useState(null)
+  const [editingContent, setEditingContent] = useState("")
 
-  const { currentUser } = useSelector((state) => state.user)
-  const [comment, setComment] = useState("")
-  const [allComments, setAllComments] = useState([])
-
-  // console.log(allComments)
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (comment.length > 200) {
-      toast({
-        title: "Comment length must be lower than or equal to 200 characters",
-      })
-
-      return
-    }
-
+  const fetchComments = async () => {
     try {
-      const res = await fetch("/api/comment/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          content: comment,
-          postId,
-          userId: currentUser._id,
-        }),
-      })
-
+      setLoading(true)
+      const res = await fetch(`/api/comment/getPostComments/${postId}`)
       const data = await res.json()
-
-      if (res.ok) {
-        toast({ title: "Comment successfully!" })
-        setComment("")
-        setAllComments([data, ...allComments])
-      }
-    } catch (error) {
-      console.log(error)
-      toast({ title: "Something went wrong! Please try again." })
+      setComments(data)
+    } catch {
+      toast({ title: "Failed to load comments." })
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    const getComments = async () => {
-      try {
-        const res = await fetch(`/api/comment/getPostComments/${postId}`)
-
-        if (res.ok) {
-          const data = await res.json()
-          setAllComments(data)
-        }
-      } catch (error) {
-        console.log(error)
-      }
-    }
-
-    getComments()
+    fetchComments()
   }, [postId])
 
-  const handleLike = async (commentId) => {
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return
+
     try {
-      if (!currentUser) {
-        navigate("/sign-in")
+      const res = await fetch("/api/comment/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newComment, postId }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast({ title: data.message || "Failed to add comment." })
         return
       }
 
+      setNewComment("")
+      fetchComments()
+    } catch {
+      toast({ title: "Failed to add comment." })
+    }
+  }
+
+  const handleLike = async (commentId) => {
+    try {
       const res = await fetch(`/api/comment/likeComment/${commentId}`, {
         method: "PUT",
       })
 
       if (res.ok) {
-        const data = await res.json()
-
-        setAllComments(
-          allComments.map((comment) =>
-            comment._id === commentId
-              ? {
-                  ...comment,
-                  likes: data.likes,
-                  numberOfLikes: data.likes.length,
-                }
-              : comment
-          )
-        )
+        fetchComments()
       }
-    } catch (error) {
-      console.log(error.message)
+    } catch {
+      toast({ title: "Failed to like comment." })
     }
-  }
-
-  const handleEdit = async (comment, editedContent) => {
-    setAllComments(
-      allComments.map((c) =>
-        c._id === comment._id ? { ...c, content: editedContent } : c
-      )
-    )
   }
 
   const handleDelete = async (commentId) => {
     try {
-      // console.log(commentId)
-
-      if (!currentUser) {
-        navigate("/sign-in")
-
-        return
-      }
-
       const res = await fetch(`/api/comment/deleteComment/${commentId}`, {
         method: "DELETE",
       })
 
       if (res.ok) {
-        const data = await res.json()
-
-        setAllComments(
-          allComments.filter((comment) => comment._id !== commentId)
-        )
+        toast({ title: "Comment deleted." })
+        fetchComments()
       }
-    } catch (error) {
-      console.log(error.message)
+    } catch {
+      toast({ title: "Failed to delete comment." })
+    }
+  }
+
+  const handleEdit = async (commentId) => {
+    try {
+      const res = await fetch(`/api/comment/editComment/${commentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editingContent }),
+      })
+
+      if (res.ok) {
+        toast({ title: "Comment updated." })
+        setEditingCommentId(null)
+        fetchComments()
+      }
+    } catch {
+      toast({ title: "Failed to update comment." })
     }
   }
 
   return (
-    <div className="max-w-3xl mx-auto w-full p-3">
-      {currentUser ? (
-        <div className="flex items-center gap-1 my-5 text-gray-500 text-sm">
-          <p>Signed in as:</p>
+    <div className="p-4 mt-6 bg-gray-100 rounded-md">
+      <h2 className="text-lg font-semibold mb-4">Comments</h2>
 
-          <img
-            src={currentUser.profilePicture}
-            alt="Profile Pic"
-            className="h-5 w-5 object-cover rounded-full"
-          />
+      <div className="flex gap-2 mb-4">
+        <Input
+          placeholder="Add a comment..."
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+        />
+        <Button onClick={handleAddComment}>Post</Button>
+      </div>
 
-          <Link
-            to={"/dashboard?tab=profile"}
-            className="text-sm text-blue-800 hover:underline"
+      {loading ? (
+        <p>Loading comments...</p>
+      ) : comments.length === 0 ? (
+        <p>No comments yet.</p>
+      ) : (
+        comments.map((comment) => (
+          <div
+            key={comment._id}
+            className="mb-4 p-3 border border-gray-300 rounded-md"
           >
-            @{currentUser.username}
-          </Link>
-        </div>
-      ) : (
-        <div className="text-sm text-gray-700 my-5 flex gap-1">
-          You must be signed in to comment.
-          <Link to={"/sign-in"} className="text-blue-600 hover:underline">
-            Sign In
-          </Link>
-        </div>
-      )}
-
-      {currentUser && (
-        <form
-          className="border-2 border-gray-400 rounded-md p-4"
-          onSubmit={handleSubmit}
-        >
-          <Textarea
-            placeholder="Add a comment..."
-            rows="3"
-            maxLength="200"
-            className="border border-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0"
-            onChange={(e) => setComment(e.target.value)}
-            value={comment}
-          />
-
-          <div className="flex justify-between items-center mt-5">
-            <p className="text-gray-500 text-sm">
-              {200 - comment.length} characters remaining
-            </p>
-
-            <Button type="submit">Submit</Button>
+            {editingCommentId === comment._id ? (
+              <div className="flex flex-col gap-2">
+                <Input
+                  value={editingContent}
+                  onChange={(e) => setEditingContent(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleEdit(comment._id)}
+                    className="bg-blue-600"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    onClick={() => setEditingCommentId(null)}
+                    variant="outline"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p>{comment.content}</p>
+                <div className="text-sm text-gray-500 mt-1 flex justify-between items-center">
+                  <span>{new Date(comment.createdAt).toLocaleDateString()}</span>
+                  <div className="flex gap-3 items-center">
+                    <button
+                      onClick={() => handleLike(comment._id)}
+                      className="text-blue-600"
+                    >
+                      ❤️ {comment.numberOfLikes}
+                    </button>
+                    {(comment.userId === localStorage.getItem("userId") ||
+                      localStorage.getItem("isAdmin") === "true") && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingCommentId(comment._id)
+                            setEditingContent(comment.content)
+                          }}
+                          className="text-yellow-600"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(comment._id)}
+                          className="text-red-600"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </form>
-      )}
-
-      {allComments.length === 0 ? (
-        <p className="text-sm my-5">No comments yes!</p>
-      ) : (
-        <>
-          <div className="text-sm my-5 flex items-center gap-1 font-semibold">
-            <p>Comments</p>
-
-            <div className="border border-gray-400 py-1 px-2 rounded-sm">
-              <p>{allComments.length}</p>
-            </div>
-          </div>
-
-          {allComments.map((comment) => (
-            <Comment
-              key={comment._id}
-              comment={comment}
-              onLike={handleLike}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </>
+        ))
       )}
     </div>
   )

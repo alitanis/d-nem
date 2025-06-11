@@ -9,9 +9,8 @@ export const updateUser = async (req, res, next) => {
 
   if (req.body.password) {
     if (req.body.password.length < 8) {
-      return next(errorHandler(400, "Password must be atleast 8 characters"))
+      return next(errorHandler(400, "Password must be at least 8 characters"))
     }
-
     req.body.password = bcryptjs.hashSync(req.body.password, 10)
   }
 
@@ -21,16 +20,13 @@ export const updateUser = async (req, res, next) => {
         errorHandler(400, "Username must be between 5 and 20 characters")
       )
     }
-
     if (req.body.username.includes(" ")) {
       return next(errorHandler(400, "Username cannot contain spaces"))
     }
-
     if (req.body.username !== req.body.username.toLowerCase()) {
       req.body.username = req.body.username.toLowerCase()
     }
-
-    if (!req.body.username.match(/^[a-zA-Z0-9]+$/)) {
+    if (!/^[a-zA-Z0-9]+$/.test(req.body.username)) {
       return next(
         errorHandler(400, "Username can only contain letters and numbers")
       )
@@ -52,7 +48,6 @@ export const updateUser = async (req, res, next) => {
     )
 
     const { password: pass, ...rest } = updatedUser._doc
-
     res.status(200).json(rest)
   } catch (error) {
     next(error)
@@ -61,24 +56,23 @@ export const updateUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   if (!req.user.isAdmin && req.user.id !== req.params.userId) {
-    return next(errorHandler(403, "You can only update your own account!"))
+    return next(errorHandler(403, "You can only delete your own account!"))
   }
 
   try {
     await User.findByIdAndDelete(req.params.userId)
-
     res.status(200).json("User has been deleted!")
   } catch (error) {
     next(error)
   }
 }
 
-export const signout = async (req, res, next) => {
+export const logoutUser = async (req, res, next) => {
   try {
     res
       .clearCookie("access_token")
       .status(200)
-      .json("User has been loggedout successfully!")
+      .json("User has been logged out successfully!")
   } catch (error) {
     next(error)
   }
@@ -103,15 +97,13 @@ export const getUsers = async (req, res, next) => {
 
     const getUsersWithoutPassword = users.map((user) => {
       const { password: pass, ...rest } = user._doc
-
-      return user
+      return rest
     })
 
     const totalUsers = await User.countDocuments()
 
-    const now = new Date() // 2024 15 Nov
-
-    const oneMonthAgo = new Date( // 2024 15 Oct
+    const now = new Date()
+    const oneMonthAgo = new Date(
       now.getFullYear(),
       now.getMonth() - 1,
       now.getDate()
@@ -140,7 +132,6 @@ export const getUserById = async (req, res, next) => {
     }
 
     const { password, ...rest } = user._doc
-
     res.status(200).json(rest)
   } catch (error) {
     next(error)

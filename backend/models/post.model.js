@@ -3,13 +3,15 @@ import mongoose from "mongoose"
 const postSchema = new mongoose.Schema(
   {
     userId: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // User modeline referans verir
       required: true,
     },
     title: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
     category: {
       type: String,
@@ -28,6 +30,8 @@ const postSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
     },
   },
   { timestamps: true }

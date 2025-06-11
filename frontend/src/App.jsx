@@ -1,50 +1,42 @@
 import React from "react"
 import { BrowserRouter, Route, Routes } from "react-router-dom"
-import SignInForm from "./auth/forms/SignInForm"
-import SignUpForm from "./auth/forms/SignUpForm"
 import Home from "./pages/Home"
 import About from "./pages/About"
-import Dashboard from "./pages/Dashboard"
+import DashboardProfile from "./pages/DashboardProfile"
 import NewsArticles from "./pages/NewsArticles"
 import Header from "./components/shared/Header"
-import { Toaster } from "./components/ui/toaster"
 import Footer from "./components/shared/Footer"
-import PrivateRoute from "./components/shared/PrivateRoute"
+import { Toaster } from "./components/ui/toaster"
 import CreatePost from "./pages/CreatePost"
-import AdminPrivateRoute from "./components/shared/AdminPrivateRoute"
 import EditPost from "./pages/EditPost"
-import PostDetails from "./pages/PostDetails"
-import ScrollToTop from "./components/shared/ScrollToTop"
+import SinglePost from "./pages/SinglePost"
 import Search from "./pages/Search"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
+import ScrollToTop from "./components/shared/ScrollToTop"
+import AdminComments from "./pages/admin/AdminComments" // 👈 BU SATIRI EKLE
 
 const App = () => {
   return (
     <BrowserRouter>
       <Header />
       <ScrollToTop />
-      <Routes>
-        <Route path="/sign-in" element={<SignInForm />} />
-        <Route path="/sign-up" element={<SignUpForm />} />
 
+      <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
-        <Route path="/search" element={<Search />} />
-
-        <Route element={<PrivateRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-        </Route>
-
-        <Route element={<AdminPrivateRoute />}>
-          <Route path="/create-post" element={<CreatePost />} />
-          <Route path="/update-post/:postId" element={<EditPost />} />
-        </Route>
-
         <Route path="/news" element={<Search />} />
-        <Route path="/post/:postSlug" element={<PostDetails />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<DashboardProfile />} />
+        <Route path="/create-post" element={<CreatePost />} />
+        <Route path="/update-post/:postId" element={<EditPost />} />
+        <Route path="/admin/comments" element={<AdminComments />} />
+        <Route path="/post/:postSlug" element={<SinglePost />} />
       </Routes>
 
       <Footer />
-
       <Toaster />
     </BrowserRouter>
   )

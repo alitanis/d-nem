@@ -9,9 +9,16 @@ import {
 
 const router = express.Router()
 
+// Yeni bir post oluştur (Sadece admin)
 router.post("/create", verifyToken, create)
-router.get("/getposts", getPosts)
-router.delete("/deletepost/:postId/:userId", verifyToken, deletepost)
-router.put("/updatepost/:postId/:userId", verifyToken, updatepost)
+
+// Postları getir (herkes erişebilir)
+router.get("/", getPosts)
+
+// Postu sil (admin veya sahip)
+router.delete("/:postId/:userId", verifyToken, deletepost)
+
+// Postu güncelle (admin veya sahip)
+router.put("/:postId/:userId", verifyToken, updatepost)
 
 export default router

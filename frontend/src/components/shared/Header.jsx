@@ -146,9 +146,10 @@ const Header = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Link to={"/sign-in"}>
+          <Link to={"/login"}>
             <Button>Sign In</Button>
           </Link>
+
         )}
       </div>
     </header>

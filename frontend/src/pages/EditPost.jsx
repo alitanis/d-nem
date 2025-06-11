@@ -10,54 +10,44 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { getFilePreview, uploadFile } from "@/lib/appwrite/uploadImage"
+
 import React, { useEffect, useState } from "react"
 import ReactQuill from "react-quill"
 import "react-quill/dist/quill.snow.css"
-import { useSelector } from "react-redux"
 import { useNavigate, useParams } from "react-router-dom"
 
 const EditPost = () => {
+  const { id } = useParams()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { postId } = useParams()
 
-  const { currentUser } = useSelector((state) => state.user)
-
+  const [postData, setPostData] = useState(null)
+  const [formData, setFormData] = useState({})
   const [file, setFile] = useState(null)
   const [imageUploadError, setImageUploadError] = useState(null)
   const [imageUploading, setImageUploading] = useState(false)
-
-  const [formData, setFormData] = useState({})
-  console.log(formData)
-
-  const [updatePostError, setUpdatePostError] = useState(null)
+  const [updateError, setUpdateError] = useState(null)
 
   useEffect(() => {
-    try {
-      const fetchPost = async () => {
-        const res = await fetch(`/api/post/getposts?postId=${postId}`)
-
+    const fetchPost = async () => {
+      try {
+        const res = await fetch(`/api/post/${id}`)
         const data = await res.json()
-
-        if (!res.ok) {
-          console.log(data.message)
-          setUpdatePostError(data.message)
-
-          return
-        }
-
-        if (res.ok) {
-          setUpdatePostError(null)
-          setFormData(data.posts[0])
-        }
+        setPostData(data)
+        setFormData({
+          title: data.title,
+          category: data.category,
+          content: data.content,
+          image: data.image,
+        })
+      } catch (err) {
+        console.error(err)
+        toast({ title: "Failed to load post data" })
       }
-
-      fetchPost()
-    } catch (error) {
-      console.log(error.message)
     }
-  }, [postId])
+
+    fetchPost()
+  }, [id])
 
   const handleUploadImage = async () => {
     try {
@@ -68,68 +58,56 @@ const EditPost = () => {
       }
 
       setImageUploading(true)
-
       setImageUploadError(null)
 
-      const uploadedFile = await uploadFile(file)
-      const postImageUrl = getFilePreview(uploadedFile.$id)
+      const formDataImage = new FormData()
+      formDataImage.append("image", file)
 
-      setFormData({ ...formData, image: postImageUrl })
+      const res = await fetch("http://localhost:5001/api/upload", {
+        method: "POST",
+        body: formDataImage,
+      })
 
-      toast({ title: "Image Uploaded Successfully!" })
-
-      if (postImageUrl) {
-        setImageUploading(false)
-      }
+      const data = await res.json()
+      setFormData((prev) => ({ ...prev, image: data.imageUrl }))
+      toast({ title: "Image uploaded successfully!" })
     } catch (error) {
       setImageUploadError("Image upload failed")
-      console.log(error)
-
       toast({ title: "Image upload failed!" })
+    } finally {
       setImageUploading(false)
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
-    console.log(formData._id)
-
     try {
-      const res = await fetch(
-        `/api/post/updatepost/${postId}/${currentUser._id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        }
-      )
+      const res = await fetch(`/api/post/update/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
 
       const data = await res.json()
 
       if (!res.ok) {
-        toast({ title: "Something went wrong! Please try again." })
-        setUpdatePostError(data.message)
-
+        toast({ title: "Update failed!" })
+        setUpdateError(data.message || "Update failed")
         return
       }
 
-      if (res.ok) {
-        toast({ title: "Article Published Successfully!" })
-        setUpdatePostError(null)
-
-        navigate(`/post/${data.slug}`)
-      }
-    } catch (error) {
-      toast({ title: "Something went wrong! Please try again." })
-      setUpdatePostError("Something went wrong! Please try again.")
+      toast({ title: "Article updated successfully!" })
+      navigate(`/post/${data.slug}`)
+    } catch (err) {
+      toast({ title: "Update failed!" })
+      setUpdateError("Update failed")
     }
   }
 
   return (
     <div className="p-3 max-w-3xl mx-auto min-h-screen">
       <h1 className="text-center text-3xl my-7 font-semibold text-slate-700">
-        Edit post
+        Edit Post
       </h1>
 
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
@@ -138,24 +116,22 @@ const EditPost = () => {
             type="text"
             placeholder="Title"
             required
-            id="title"
-            className="w-full sm:w-3/4 h-12 border border-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0"
+            value={formData.title || ""}
             onChange={(e) =>
               setFormData({ ...formData, title: e.target.value })
             }
-            value={formData.title}
+            className="w-full sm:w-3/4 h-12 border border-slate-400"
           />
 
           <Select
+            value={formData.category}
             onValueChange={(value) =>
               setFormData({ ...formData, category: value })
             }
-            value={formData.category}
           >
-            <SelectTrigger className="w-full sm:w-1/4 h-12 border border-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0">
+            <SelectTrigger className="w-full sm:w-1/4 h-12 border border-slate-400">
               <SelectValue placeholder="Select a Category" />
             </SelectTrigger>
-
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Category</SelectLabel>
@@ -195,24 +171,23 @@ const EditPost = () => {
 
         <ReactQuill
           theme="snow"
-          placeholder="Write something here..."
-          className="h-72  mb-12"
-          required
-          onChange={(value) => {
+          placeholder="Edit content..."
+          className="h-72 mb-12"
+          value={formData.content || ""}
+          onChange={(value) =>
             setFormData({ ...formData, content: value })
-          }}
-          value={formData.content}
+          }
         />
 
         <Button
           type="submit"
-          className="h-12 bg-green-600 font-semibold max-sm:mt-5 text-md"
+          className="h-12 bg-blue-600 font-semibold text-md"
         >
-          Update Your Article
+          Update Post
         </Button>
 
-        {updatePostError && (
-          <p className="text-red-600 mt-5">{updatePostError}</p>
+        {updateError && (
+          <p className="text-red-600 mt-5">{updateError}</p>
         )}
       </form>
     </div>
