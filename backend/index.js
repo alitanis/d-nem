@@ -1,5 +1,3 @@
-import cron from "node-cron";
-import { fetchAndSaveRSS } from "./utils/rssFetcher.js";
 import express from "express"
 import mongoose from "mongoose"
 import dotenv from "dotenv"
@@ -31,15 +29,6 @@ const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}!`)
 })
-// Sunucu her açıldığında bir kere RSS verisi çeksin
-fetchAndSaveRSS();
-
-// Her saat başı RSS güncellemesi yap
-cron.schedule("0 * * * *", async () => {
-  console.log("⏰ Her saat başı RSS çekiliyor...");
-  await fetchAndSaveRSS();
-});
-
 
 app.use("/api/auth", authRoutes)
 app.use("/api/user", userRoutes)
