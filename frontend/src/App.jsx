@@ -2,7 +2,7 @@ import React from "react"
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import Home from "./pages/Home"
 import About from "./pages/About"
-import DashboardProfile from "./pages/DashboardProfile"
+import DashboardProfile from "./pages/Dashboard"
 import NewsArticles from "./pages/NewsArticles"
 import Header from "./components/shared/Header"
 import Footer from "./components/shared/Footer"
@@ -14,7 +14,7 @@ import Search from "./pages/Search"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
 import ScrollToTop from "./components/shared/ScrollToTop"
-import AdminComments from "./pages/admin/AdminComments" // 👈 BU SATIRI EKLE
+import AdminComments from "./pages/AdminComments" // 👈 BU SATIRI EKLE
 
 const App = () => {
   return (
